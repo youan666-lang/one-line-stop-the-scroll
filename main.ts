@@ -1,56 +1,41 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+// One Line to Stop the Scroll.
+//
+// One line that makes a stranger stop scrolling and smile. The trick
+// is confessing the scroll itself: I arrived to check the weather and
+// stayed for a cat called Chairman Meow. A stranger recognises the
+// exact detour, smiles at the chairman, and the rating at the end
+// ("ten out of ten, would get distracted again") is the shrug that
+// sells it. Read it like telling a friend why you are late.
+import fs from "node:fs";
+import path from "node:path";
 
-// One Line to Stop the Scroll — one line to make a stranger stop
-// scrolling and smile.
-// The setup is mundane (checking the weather); the turn is the cat
-// named Chairman Meow, a tiny chairman of distraction. The joke admits
-// the scroll it interrupts, which is exactly what makes a stranger
-// smile instead of scrolling past.
-// Delivery: read it like a confession to a friend, and let the last
-// clause, "would get distracted again", land as the shrug.
-const setup = "I came here to check the weather and stayed for a cat named Chairman Meow,";
-const twist = "ten out of ten, would get distracted again.";
-const line = `${setup} ${twist}`;
+const LINE =
+  "I came here to check the weather and stayed for a cat named Chairman Meow, ten out of ten, would get distracted again.";
 
-function countChars(text: string): number {
-  return [...text].length;
-}
-
-function sentenceCount(text: string): number {
-  return text.split(/[.!?]/).filter((part) => part.trim().length > 0).length;
-}
-
-// The gate wants 1-200 characters of UTF-8 text, not only white space.
-// One line, one breath: the setup and the punchline share a single full
-// stop at the very end, and the em dash before "ten out of ten" is the
-// pause where the smile lands. The line is written as setup + twist so the
-// turn ("would get distracted again") is impossible to miss when the
-// file is read aloud — the judge hears the self-aware scroll joke.
-function isScrollLine(text: string): boolean {
-  const chars = countChars(text);
-  if (chars < 1 || chars > 200) return false;
-  if (text.trim().length === 0) return false;
-  if (!text.trimEnd().endsWith(".")) return false;
-  if (sentenceCount(text) !== 1) return false;
-  if (text.includes("\n")) return false;
-  if (text.includes("  ")) return false;
-  if (!text.includes("Chairman Meow")) return false;
-  return true;
+function problems(text: string): string[] {
+  const found: string[] = [];
+  const chars = [...text].length;
+  if (chars < 1 || chars > 200) found.push(`length ${chars} is outside 1-200`);
+  if (text.trim().length === 0) found.push("line is only white space");
+  if (text.includes("\n")) found.push("line spans more than one line");
+  if (text.includes("  ")) found.push("line has a double space");
+  if (!text.trimEnd().endsWith(".")) found.push("line does not end on a full stop");
+  // One sentence, one breath: the weather, the cat and the rating
+  // belong to a single thought, so a second full stop would break it.
+  const sentences = text.split(/[.!?]/).filter((part) => part.trim().length > 0).length;
+  if (sentences !== 1) found.push(`line has ${sentences} sentences, want 1`);
+  if (!text.includes("Chairman Meow")) found.push("the cat is missing");
+  return found;
 }
 
 function main(): void {
-  if (!isScrollLine(line)) {
-    throw new Error(
-      `scroll line must be one line of 1-200 characters, got ${countChars(line)} chars and ${sentenceCount(line)} sentences`,
-    );
+  const bad = problems(LINE);
+  if (bad.length > 0) {
+    throw new Error(`scroll line is not valid: ${bad.join("; ")}`);
   }
-  const targetDir = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? "/output");
-  if (!existsSync(targetDir)) {
-    mkdirSync(targetDir, { recursive: true });
-  }
-  const destination = join(targetDir, "entry.txt");
-  writeFileSync(destination, line, { encoding: "utf8", mode: 0o644 });
+  const outDir = path.resolve(process.env.MAKEFUN_OUTPUT_DIR ?? "/output");
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(path.join(outDir, "entry.txt"), LINE, { encoding: "utf8", mode: 0o644 });
 }
 
 main();
